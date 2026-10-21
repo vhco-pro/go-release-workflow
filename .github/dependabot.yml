@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Example folders are scanned too, so the pins callers copy stay current.
+  - package-ecosystem: github-actions
+    directories: ["/", "/examples/*"]
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly

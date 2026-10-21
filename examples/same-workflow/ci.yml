@@ -1,0 +1,54 @@
+name: CI
+
+# Same-workflow arrangement, for a repository without a GitHub App. Copy this
+# folder into .github/workflows and replace FULL_COMMIT_SHA with a released
+# commit of vhco-pro/go-release-workflow. Needs: PGP_PRIVATE_KEY (secret).
+# GITHUB_TOKEN pushes the tag, which starts no other workflow, so the release
+# job below publishes it. Retry a failed release with "Re-run failed jobs";
+# "Re-run all jobs" finds the tag already pushed and releases nothing, and a
+# tag pushed by hand publishes nothing.
+#
+# Runs on branch pushes, not pull_request: GitVersion needs the real branch,
+# and a PR shows these push checks on its head commit.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: michielvha/go-ci-action@ab14d6420148179e8d20ecc0b7cb89760193cb37 # v0.1.0
+
+  # Add repository-specific checks here and list them in version's needs.
+
+  # Tags main, and a branch whose open PR has the release:preview label at this
+  # commit. Every other run only calculates the version.
+  version:
+    needs: [verify]
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: vhco-pro/version-workflow/.github/workflows/version.yml@22021f1c05a8bc3682697f63fc0789907b02b170 # unreleased draft
+
+  release:
+    needs: version
+    if: ${{ needs.version.outputs.tagged == 'true' }}
+    permissions:
+      contents: write
+    uses: vhco-pro/go-release-workflow/.github/workflows/go-release.yml@FULL_COMMIT_SHA
+    with:
+      tag: ${{ needs.version.outputs.tag }}
+    secrets:
+      pgp-private-key: ${{ secrets.PGP_PRIVATE_KEY }}
