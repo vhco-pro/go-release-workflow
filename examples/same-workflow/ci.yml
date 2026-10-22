@@ -40,7 +40,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
-    uses: vhco-pro/version-workflow/.github/workflows/version.yml@22021f1c05a8bc3682697f63fc0789907b02b170 # unreleased draft
+    uses: vhco-pro/version-workflow/.github/workflows/version.yml@3b78b04df802ea1592cbe19338d7a882d1888389 # v0.1.0
 
   release:
     needs: version
