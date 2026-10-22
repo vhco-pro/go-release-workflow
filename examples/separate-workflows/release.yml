@@ -1,0 +1,17 @@
+name: Release
+
+# Started by the exact tag the App pushed in ci.yml, or by a tag pushed by hand.
+# Needs: PGP_PRIVATE_KEY (secret).
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions: {}
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    uses: vhco-pro/go-release-workflow/.github/workflows/go-release.yml@FULL_COMMIT_SHA
+    secrets:
+      pgp-private-key: ${{ secrets.PGP_PRIVATE_KEY }}

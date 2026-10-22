@@ -1,0 +1,67 @@
+name: Go release
+
+# Checks out the exact tag, runs the Go checks on it, and only if they pass
+# builds, signs and publishes the GoReleaser release. The checks run here as
+# well as before tagging: whoever or whatever pushed the tag, nothing is
+# published from source that failed them.
+#
+# Runs for a tag push event (separate-workflows arrangement), or for the `tag`
+# input when the version job tagged earlier in the same run (same-workflow
+# arrangement, where a GITHUB_TOKEN tag push starts no workflow).
+
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        description: Go toolchain declaration in the caller checkout
+        type: string
+        default: go.mod
+      golangci-lint-config:
+        description: Caller lint configuration
+        type: string
+        default: .golangci.yml
+      tag:
+        description: Exact tag created earlier in the same run; empty releases the tag push event
+        type: string
+        default: ''
+    secrets:
+      pgp-private-key:
+        description: Artifact signing key
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: go-release-${{ github.repository }}-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ startsWith(inputs.tag, 'v') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !github.event.deleted) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - name: Verify Go
+        id: ci
+        uses: michielvha/go-ci-action@ab14d6420148179e8d20ecc0b7cb89760193cb37 # v0.1.0
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          golangci-lint-config: ${{ inputs.golangci-lint-config }}
+      - name: Build, sign, and release
+        uses: michielvha/goreleaser-action@99d53be595f6e73dbbd9adb136ea4c1cca86fe58 # v2.0.0
+        env:
+          GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
+        with:
+          go-version: ${{ steps.ci.outputs.go-version }}
+          go-cache: 'false'
+          github-token: ${{ github.token }}
+          pgp-private-key: ${{ secrets.pgp-private-key }}
