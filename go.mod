@@ -4,7 +4,7 @@ go 1.27.2
 
 tool github.com/rhysd/actionlint/cmd/actionlint
 
-require go.yaml.in/yaml/v3 v3.0.5
+require go.yaml.in/yaml/v3 v3.0.6
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
